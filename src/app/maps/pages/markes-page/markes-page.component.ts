@@ -1,11 +1,15 @@
 import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { Map, LngLat, Marker } from 'mapbox-gl';
 
-interface markerAndColor {
+interface MarkerAndColor {
   color: string;
   marker?: Marker
 }
 
+interface PlainMarker {
+  color: string;
+  lngLat: number[]
+}
 
 @Component({
   templateUrl: './markes-page.component.html',
@@ -15,7 +19,7 @@ export class MarkesPageComponent implements AfterViewInit {
 
   @ViewChild('map') divMap?: ElementRef;
   
-  public markers : markerAndColor[] = []
+  public markers : MarkerAndColor[] = []
   
   public map?: Map;
   public currentLngLat: LngLat = new LngLat(-74.5, 40);
@@ -31,6 +35,7 @@ export class MarkesPageComponent implements AfterViewInit {
       center: this.currentLngLat,
       zoom: 14
     });
+    this.readFromLocalStorage()
   }
 
   createMarker(){
@@ -57,8 +62,14 @@ export class MarkesPageComponent implements AfterViewInit {
       color,
       marker
     })
-    console.log(this.markers);
-    
+
+    this.saveToLocalStorage()
+
+    marker.on('dragend', () => {
+
+      this.saveToLocalStorage()
+      
+    })
   }
 
   deleteMarker( i : number ){
@@ -72,6 +83,35 @@ export class MarkesPageComponent implements AfterViewInit {
       zoom: 14,
       center: marker.getLngLat()
     })
+  }
+
+  saveToLocalStorage(  ){
+
+    const plainMarkers : PlainMarker[] = this.markers.map( ({color, marker}) => {
+
+      return {
+        color,
+        lngLat: marker!.getLngLat().toArray()
+      }
+    })
+
+    localStorage.setItem('plainMarkers', JSON.stringify(plainMarkers)) 
+    
+  }
+
+  readFromLocalStorage(){
+
+    const plainMarkersString = localStorage.getItem('plainMarkers') ?? '[]'
+    const plainMarkers : PlainMarker[] = JSON.parse(plainMarkersString)
+    console.log(plainMarkers);
+
+    plainMarkers.forEach( ({color, lngLat}) => {
+      const [ lng, Lat ] = lngLat
+      const coords = new LngLat(lng, Lat)
+
+      this.addMarker(coords, color)
+    })
+
   }
 
 }
